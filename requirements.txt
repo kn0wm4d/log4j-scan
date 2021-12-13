@@ -1,3 +1,4 @@
 requests
 termcolor
-pycrypto
+pycryptodome
+requests_futures

