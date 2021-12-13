@@ -183,7 +183,7 @@ class Interactsh:
         self.domain = f'{guid}.{self.server}'
         self.correlation_id = self.domain[:20]
 
-        self.session = FuturesSession(max_workers=12)
+        self.session = requests.session()
         self.session.headers = self.headers
         self.register()
 
