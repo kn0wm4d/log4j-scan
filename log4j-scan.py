@@ -346,12 +346,18 @@ def main():
                     ext = tldextract.extract(i)
                     if ext.subdomain != '':
                         i = f'{ext.subdomain}.{ext.registered_domain}'
-                        ip = socket.gethostbyname(f'{i}')
-                        ips = [ip]
+                        try:
+                            ip = socket.gethostbyname(f'{i}')
+                            ips = [ip]
+                        except:
+                            ips = []
                     else:
                         i = f'{ext.registered_domain}'
-                        ip = socket.gethostbyname(f'{i}')
-                        ips = [ip]
+                        try:
+                            ip = socket.gethostbyname(f'{i}')
+                            ips = [ip]
+                        except:
+                            ips = []
                 if valid_ip:
                     for ip in ips:
                         if ip and f'http://{ip}' not in urls:
