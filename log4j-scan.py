@@ -317,32 +317,43 @@ def main():
         with open(args.usedlist, "r") as f:
             for i in f.readlines():
                 valid_ip = False
+                ips = []
                 i = i.strip().replace('http://', '').replace('https://', '')
                 if i == "" or i.startswith("#"):
                     continue
                 try:
                     valid_ip = ipaddress.ip_address(i)
                     ip = i
+                    valid_ip = True
                 except:
-                    valid_ip = False
+                    try:
+                        ips = [str(ip) for ip in ipaddress.IPv4Network(i)]
+                        valid_ip = True
+                    except:
+                        valid_ip = False
+                if not valid_ip:
                     ext = tldextract.extract(i)
                     if ext.subdomain != '':
                         i = f'{ext.subdomain}.{ext.registered_domain}'
                         ip = socket.gethostbyname(f'{i}')
+                        ips = [ip]
                     else:
                         i = f'{ext.registered_domain}'
                         ip = socket.gethostbyname(f'{i}')
-                if ip and f'http://{ip}' not in urls:
-                    urls.append(f'http://{ip}')
-                    urls.append(f'https://{ip}')
-                    try:
-                        host = socket.gethostbyaddr(i)[0]
-                        if f'http://{host}' not in urls:
-                            urls.append(f'http://{host}')
-                        if f'https://{host}' not in urls:
-                            urls.append(f'https://{host}')
-                    except:
-                        pass
+                        ips = [ip]
+                if valid_ip:
+                    for ip in ips:
+                        if ip and f'http://{ip}' not in urls:
+                            urls.append(f'http://{ip}')
+                            urls.append(f'https://{ip}')
+                        try:
+                            host = socket.gethostbyaddr(ip)[0]
+                            if f'http://{host}' not in urls:
+                                urls.append(f'http://{host}')
+                            if f'https://{host}' not in urls:
+                                urls.append(f'https://{host}')
+                        except:
+                            pass
                 if not valid_ip and f'http://{i}' not in urls:
                     urls.append(f'http://{i}')
                     urls.append(f'https://{i}')
