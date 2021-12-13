@@ -255,7 +255,7 @@ def parse_url(url):
 
 async_session = FuturesSession(max_workers=12)
 
-def ips(start, end):
+def get_ips(start, end):
     '''Return IPs in IPv4 range, inclusive.'''
     start_int = int(ipaddress.ip_address(start).packed.hex(), 16)
     end_int = int(ipaddress.ip_address(end).packed.hex(), 16)
@@ -338,7 +338,7 @@ def main():
                     except:
                         try:
                             start, end = i.split(' - ')
-                            ips = ips(start, end)
+                            ips = get_ips(start, end)
                             valid_ip = True
                         except:
                             valid_ip = False
