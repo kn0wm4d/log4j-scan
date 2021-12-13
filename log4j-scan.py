@@ -359,6 +359,7 @@ def main():
                             urls.append(f'https://{ip}')
                         try:
                             host = socket.gethostbyaddr(ip)[0]
+                            cprint(f"[•] Resolving host from IP ({ip}) -> ({host})")
                             if f'http://{host}' not in urls:
                                 urls.append(f'http://{host}')
                             if f'https://{host}' not in urls:
@@ -368,7 +369,6 @@ def main():
                 if not valid_ip and f'http://{i}' not in urls:
                     urls.append(f'http://{i}')
                     urls.append(f'https://{i}')
-                print(urls)
         open('url_list.txt', 'w').write(json.dumps(urls, indent=4))
 
     dns_callback_host = ""
