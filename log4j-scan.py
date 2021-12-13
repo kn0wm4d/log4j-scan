@@ -264,7 +264,12 @@ def scan_url(url, callback_host):
         if args.request_type.upper() == "GET" or args.run_all_tests:
             try:
                 async_session.get(url=url,
-                                 params={"v": payload},
+                                 params={"x": payload},
+                                 headers=get_fuzzing_headers(payload),
+                                 verify=False,
+                                 timeout=timeout)
+                async_session.get(url=url+'/'+payload,
+                                 params={"x": payload},
                                  headers=get_fuzzing_headers(payload),
                                  verify=False,
                                  timeout=timeout)
@@ -275,7 +280,13 @@ def scan_url(url, callback_host):
             try:
                 # Post body
                 async_session.post(url=url,
-                                 params={"v": payload},
+                                 params={"x": payload},
+                                 headers=get_fuzzing_headers(payload),
+                                 data=get_fuzzing_post_data(payload),
+                                 verify=False,
+                                 timeout=timeout)
+                async_session.post(url=url+'/'+payload,
+                                 params={"x": payload},
                                  headers=get_fuzzing_headers(payload),
                                  data=get_fuzzing_post_data(payload),
                                  verify=False,
