@@ -24,7 +24,7 @@ from Crypto.PublicKey import RSA
 from Crypto.Hash import SHA256
 from termcolor import cprint
 from requests_futures.sessions import FuturesSession
-import socket
+import socket, struct
 import tldextract
 import ipaddress
 
@@ -255,6 +255,12 @@ def parse_url(url):
 
 async_session = FuturesSession(max_workers=12)
 
+def ips(start, end):
+    '''Return IPs in IPv4 range, inclusive.'''
+    start_int = int(ipaddress.ip_address(start).packed.hex(), 16)
+    end_int = int(ipaddress.ip_address(end).packed.hex(), 16)
+    return [ipaddress.ip_address(ip).exploded for ip in range(start_int, end_int)]
+
 def scan_url(url, callback_host):
     parsed_url = parse_url(url)
     random_string = ''.join(random.choice('0123456789abcdefghijklmnopqrstuvwxyz') for i in range(7))
@@ -330,7 +336,12 @@ def main():
                         ips = [str(ip) for ip in ipaddress.IPv4Network(i)]
                         valid_ip = True
                     except:
-                        valid_ip = False
+                        try:
+                            start, end = i.split(' - ')
+                            ips = ips(start, end)
+                            valid_ip = True
+                        except:
+                            valid_ip = False
                 if not valid_ip:
                     ext = tldextract.extract(i)
                     if ext.subdomain != '':
@@ -357,6 +368,8 @@ def main():
                 if not valid_ip and f'http://{i}' not in urls:
                     urls.append(f'http://{i}')
                     urls.append(f'https://{i}')
+                print(urls)
+        open('url_list.txt', 'w').write(json.dumps(urls, indent=4))
 
     dns_callback_host = ""
     if args.custom_dns_callback_host:
