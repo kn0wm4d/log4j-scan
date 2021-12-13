@@ -2,3 +2,4 @@ requests
 termcolor
 pycryptodome
 requests_futures
+tldextract

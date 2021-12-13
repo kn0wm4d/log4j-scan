@@ -24,6 +24,9 @@ from Crypto.PublicKey import RSA
 from Crypto.Hash import SHA256
 from termcolor import cprint
 from requests_futures.sessions import FuturesSession
+import socket
+import tldextract
+import ipaddress
 
 
 # Disable SSL warnings
@@ -313,10 +316,36 @@ def main():
     if args.usedlist:
         with open(args.usedlist, "r") as f:
             for i in f.readlines():
-                i = i.strip()
+                valid_ip = False
+                i = i.strip().replace('http://', '').replace('https://', '')
                 if i == "" or i.startswith("#"):
                     continue
-                urls.append(i)
+                try:
+                    valid_ip = ipaddress.ip_address(i)
+                    ip = i
+                except:
+                    valid_ip = False
+                    ext = tldextract.extract(i)
+                    if ext.subdomain != '':
+                        i = f'{ext.subdomain}.{ext.registered_domain}'
+                        ip = socket.gethostbyname(f'{i}')
+                    else:
+                        i = f'{ext.registered_domain}'
+                        ip = socket.gethostbyname(f'{i}')
+                if ip and f'http://{ip}' not in urls:
+                    urls.append(f'http://{ip}')
+                    urls.append(f'https://{ip}')
+                    try:
+                        host = socket.gethostbyaddr(i)[0]
+                        if f'http://{host}' not in urls:
+                            urls.append(f'http://{host}')
+                        if f'https://{host}' not in urls:
+                            urls.append(f'https://{host}')
+                    except:
+                        pass
+                if not valid_ip and f'http://{i}' not in urls:
+                    urls.append(f'http://{i}')
+                    urls.append(f'https://{i}')
 
     dns_callback_host = ""
     if args.custom_dns_callback_host:
