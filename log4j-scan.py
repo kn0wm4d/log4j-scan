@@ -358,6 +358,7 @@ def main():
                         except:
                             valid_ip = False
                 if not valid_ip:
+                    original_url = i
                     ext = tldextract.extract(i)
                     if ext.subdomain != '':
                         i = f'{ext.subdomain}.{ext.registered_domain}'
@@ -373,6 +374,9 @@ def main():
                             ips = [ip]
                         except:
                             ips = []
+                    path = urlparse.urlparse('http://'+original_url).path
+                    if path != "":
+                        i = i + path
                 if valid_ip:
                     for ip in ips:
                         if ip and f'http://{ip}' not in urls:
@@ -390,7 +394,9 @@ def main():
                 if not valid_ip and f'http://{i}' not in urls:
                     urls.append(f'http://{i}')
                     urls.append(f'https://{i}')
-        open(args.usedlist + '_test_list.txt', 'w').write(json.dumps(urls, indent=4))
+        list_name = args.usedlist.split('.')[0] + '_test_list.txt'
+        cprint(f"[•] Exported URLs List to ({list_name}).")
+        open(list_name, 'w').write(json.dumps(urls, indent=4))
 
     dns_callback_host = ""
     if args.custom_dns_callback_host:
