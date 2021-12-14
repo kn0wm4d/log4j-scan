@@ -123,6 +123,14 @@ parser.add_argument("--custom-dns-callback-host",
                     dest="custom_dns_callback_host",
                     help="Custom DNS Callback Host.",
                     action='store')
+parser.add_argument("--wait-response",
+                    dest="wait_response",
+                    help="Await the Async Request Response.",
+                    action='store_true')
+parser.add_argument("--host-discovery",
+                    dest="host_discovery",
+                    help="Find hostname from the IP/IP Range",
+                    action='store_true')
 
 args = parser.parse_args()
 
@@ -382,15 +390,16 @@ def main():
                         if ip and f'http://{ip}' not in urls:
                             urls.append(f'http://{ip}')
                             urls.append(f'https://{ip}')
-                        try:
-                            host = socket.gethostbyaddr(ip)[0]
-                            cprint(f"[•] Resolving host from IP ({ip}) -> ({host})")
-                            if f'http://{host}' not in urls:
-                                urls.append(f'http://{host}')
-                            if f'https://{host}' not in urls:
-                                urls.append(f'https://{host}')
-                        except:
-                            pass
+                        if args.host_discovery:
+                            try:
+                                host = socket.gethostbyaddr(ip)[0]
+                                cprint(f"[•] Resolving host from IP ({ip}) -> ({host})")
+                                if f'http://{host}' not in urls:
+                                    urls.append(f'http://{host}')
+                                if f'https://{host}' not in urls:
+                                    urls.append(f'https://{host}')
+                            except:
+                                pass
                 if not valid_ip and f'http://{i}' not in urls:
                     urls.append(f'http://{i}')
                     urls.append(f'https://{i}')
@@ -436,12 +445,13 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-        for f in futures:
-            try:
-                res = f.result()
-                cprint(f"[•] URL: {res.url} | RESPONSE: {res.status_code}", "cyan")
-            except:
-                continue
+        if args.wait_response:
+            for f in futures:
+                try:
+                    res = f.result()
+                    cprint(f"[•] URL: {res.url} | RESPONSE: {res.status_code}", "cyan")
+                except:
+                    continue
     except KeyboardInterrupt:
         print("\nKeyboardInterrupt Detected.")
         print("Exiting...")
