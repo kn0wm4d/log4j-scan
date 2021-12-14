@@ -274,6 +274,10 @@ def scan_url(url, callback_host):
         if args.request_type.upper() == "GET" or args.run_all_tests:
             try:
                 futures.append(async_session.get(url=url,
+                                 headers=get_fuzzing_headers(payload),
+                                 verify=False,
+                                 timeout=timeout))
+                futures.append(async_session.get(url=url,
                                  params={"x": payload},
                                  headers=get_fuzzing_headers(payload),
                                  verify=False,
@@ -289,6 +293,11 @@ def scan_url(url, callback_host):
         if args.request_type.upper() == "POST" or args.run_all_tests:
             try:
                 # Post body
+                futures.append(async_session.post(url=url,
+                                 headers=get_fuzzing_headers(payload),
+                                 data=get_fuzzing_post_data(payload),
+                                 verify=False,
+                                 timeout=timeout))
                 futures.append(async_session.post(url=url,
                                  params={"x": payload},
                                  headers=get_fuzzing_headers(payload),
@@ -306,6 +315,11 @@ def scan_url(url, callback_host):
 
             try:
                 # JSON body
+                futures.append(async_session.post(url=url,
+                                 headers=get_fuzzing_headers(payload),
+                                 json=get_fuzzing_post_data(payload),
+                                 verify=False,
+                                 timeout=timeout))
                 futures.append(async_session.post(url=url,
                                  params={"v": payload},
                                  headers=get_fuzzing_headers(payload),
