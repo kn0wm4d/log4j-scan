@@ -415,7 +415,7 @@ def main():
                     urls.append(f'https://{i}')
 
         random.shuffle(urls)
-        
+
         list_name = args.usedlist.split('.')[0] + '_test_list.txt'
         cprint(f"[•] Exported URLs List to ({list_name}).")
         open(list_name, 'w').write(json.dumps(urls, indent=4))
@@ -465,8 +465,8 @@ if __name__ == "__main__":
                 try:
                     res = f.result()
                     cprint(f"[•] URL: {res.url} | RESPONSE: {res.status_code}", "cyan")
-                except:
-                    continue
+                except Exception as e:
+                    cprint(f"[•] URL: {res.url} | EXCEPTION: {e}", "red")
     except KeyboardInterrupt:
         print("\nKeyboardInterrupt Detected.")
         print("Exiting...")
