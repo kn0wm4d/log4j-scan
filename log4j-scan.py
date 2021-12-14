@@ -390,7 +390,7 @@ def main():
                 if not valid_ip and f'http://{i}' not in urls:
                     urls.append(f'http://{i}')
                     urls.append(f'https://{i}')
-        open('url_list.txt', 'w').write(json.dumps(urls, indent=4))
+        open(args.usedlist + '_test_list.txt', 'w').write(json.dumps(urls, indent=4))
 
     dns_callback_host = ""
     if args.custom_dns_callback_host:
