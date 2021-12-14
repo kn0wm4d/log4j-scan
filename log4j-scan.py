@@ -126,6 +126,7 @@ parser.add_argument("--custom-dns-callback-host",
 
 args = parser.parse_args()
 
+futures = []
 
 def get_fuzzing_headers(payload):
     fuzzing_headers = {}
@@ -253,7 +254,7 @@ def parse_url(url):
             "host":  urlparse.urlparse(url).netloc.split(":")[0],
             "file_path": file_path})
 
-async_session = FuturesSession(max_workers=12)
+async_session = FuturesSession(max_workers=6)
 
 def get_ips(start, end):
     '''Return IPs in IPv4 range, inclusive.'''
@@ -272,45 +273,45 @@ def scan_url(url, callback_host):
         cprint(f"[•] URL: {url} | PAYLOAD: {payload}", "cyan")
         if args.request_type.upper() == "GET" or args.run_all_tests:
             try:
-                async_session.get(url=url,
+                futures.append(async_session.get(url=url,
                                  params={"x": payload},
                                  headers=get_fuzzing_headers(payload),
                                  verify=False,
-                                 timeout=timeout)
-                async_session.get(url=url+'/'+payload,
+                                 timeout=timeout))
+                futures.append(async_session.get(url=url+'/'+payload,
                                  params={"x": payload},
                                  headers=get_fuzzing_headers(payload),
                                  verify=False,
-                                 timeout=timeout)
+                                 timeout=timeout))
             except Exception as e:
                 cprint(f"EXCEPTION: {e}")
 
         if args.request_type.upper() == "POST" or args.run_all_tests:
             try:
                 # Post body
-                async_session.post(url=url,
+                futures.append(async_session.post(url=url,
                                  params={"x": payload},
                                  headers=get_fuzzing_headers(payload),
                                  data=get_fuzzing_post_data(payload),
                                  verify=False,
-                                 timeout=timeout)
-                async_session.post(url=url+'/'+payload,
+                                 timeout=timeout))
+                futures.append(async_session.post(url=url+'/'+payload,
                                  params={"x": payload},
                                  headers=get_fuzzing_headers(payload),
                                  data=get_fuzzing_post_data(payload),
                                  verify=False,
-                                 timeout=timeout)
+                                 timeout=timeout))
             except Exception as e:
                 cprint(f"EXCEPTION: {e}")
 
             try:
                 # JSON body
-                async_session.post(url=url,
+                futures.append(async_session.post(url=url,
                                  params={"v": payload},
                                  headers=get_fuzzing_headers(payload),
                                  json=get_fuzzing_post_data(payload),
                                  verify=False,
-                                 timeout=timeout)
+                                 timeout=timeout))
             except Exception as e:
                 cprint(f"EXCEPTION: {e}")
 
@@ -415,6 +416,12 @@ def main():
 if __name__ == "__main__":
     try:
         main()
+        for f in futures:
+            try:
+                res = f.result()
+                cprint(f"[•] URL: {res.url} | RESPONSE: {res.status_code}", "cyan")
+            except:
+                continue
     except KeyboardInterrupt:
         print("\nKeyboardInterrupt Detected.")
         print("Exiting...")
