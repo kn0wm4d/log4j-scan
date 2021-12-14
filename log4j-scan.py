@@ -413,6 +413,8 @@ def main():
                 if not valid_ip and f'http://{i}' not in urls:
                     urls.append(f'http://{i}')
                     urls.append(f'https://{i}')
+
+        urls = random.shuffle(urls)
         list_name = args.usedlist.split('.')[0] + '_test_list.txt'
         cprint(f"[•] Exported URLs List to ({list_name}).")
         open(list_name, 'w').write(json.dumps(urls, indent=4))
