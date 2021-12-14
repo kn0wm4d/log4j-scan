@@ -131,6 +131,14 @@ parser.add_argument("--host-discovery",
                     dest="host_discovery",
                     help="Find hostname from the IP/IP Range",
                     action='store_true')
+parser.add_argument("--export",
+                    dest="export_list",
+                    help="Only export the URL list.",
+                    action='store_true')
+parser.add_argument("--resolve",
+                    dest="resolve_ip",
+                    help="Scan the IP URL (http://<IP>).",
+                    action='store_true')
 
 args = parser.parse_args()
 
@@ -370,18 +378,20 @@ def main():
                     ext = tldextract.extract(i)
                     if ext.subdomain != '':
                         i = f'{ext.subdomain}.{ext.registered_domain}'
-                        try:
-                            ip = socket.gethostbyname(f'{i}')
-                            ips = [ip]
-                        except:
-                            ips = []
+                        if args.resolve_ip:
+                            try:
+                                ip = socket.gethostbyname(f'{i}')
+                                ips = [ip]
+                            except:
+                                ips = []
                     else:
                         i = f'{ext.registered_domain}'
-                        try:
-                            ip = socket.gethostbyname(f'{i}')
-                            ips = [ip]
-                        except:
-                            ips = []
+                        if args.resolve_ip:
+                            try:
+                                ip = socket.gethostbyname(f'{i}')
+                                ips = [ip]
+                            except:
+                                ips = []
                     path = urlparse.urlparse('http://'+original_url).path
                     if path != "":
                         i = i + path
@@ -406,6 +416,8 @@ def main():
         list_name = args.usedlist.split('.')[0] + '_test_list.txt'
         cprint(f"[•] Exported URLs List to ({list_name}).")
         open(list_name, 'w').write(json.dumps(urls, indent=4))
+        if args.export_list:
+            sys.exit()
 
     dns_callback_host = ""
     if args.custom_dns_callback_host:
