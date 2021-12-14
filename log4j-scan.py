@@ -345,7 +345,7 @@ def main():
                 try:
                     valid_ip = ipaddress.ip_address(i)
                     ip = i
-                    valid_ip = True
+                    ips = [ip]
                 except:
                     try:
                         ips = [str(ip) for ip in ipaddress.IPv4Network(i)]
