@@ -350,6 +350,9 @@ def main():
                             except:
                                 ips = []
                     path = urlparse.urlparse('http://'+original_url).path
+                    port = urlparse.urlparse('http://'+original_url).port
+                    if port:
+                        i = f'{i}:{port}'
                     if path != "":
                         i = i + path
                 if valid_ip:
