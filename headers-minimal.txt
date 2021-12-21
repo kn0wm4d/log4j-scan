@@ -1,0 +1,7 @@
+User-Agent
+Via
+Warning
+X-Api-Version
+Max-Forwards
+Origin
+Pragma

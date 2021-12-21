@@ -79,7 +79,7 @@ parser.add_argument("-u", "--url",
                     action='store')
 parser.add_argument("-l", "--list",
                     dest="usedlist",
-                    help="Check a list of URLs.",
+                    help="Check a list of URLs / IP Range (' - ' separator) / IP CIDR / Domains / Subdomains",
                     action='store')
 parser.add_argument("--request-type",
                     dest="request_type",
@@ -135,16 +135,16 @@ parser.add_argument("--resolve",
                     action='store_true')
 parser.add_argument("--all-ports",
                     dest="all_ports",
-                    help="Scan The Domains/Sites Typical Ports.",
+                    help="Scan the URLs / Domains / Subdomains / IP Range / IP CIDR Typical Ports.",
                     action='store_true')
 parser.add_argument("--workers",
                     dest="workers",
-                    help="Scan The Domains/Sites Typical Ports.",
+                    help="Sets the number of workers for Requests Futures.",
                     action='store',
                     default=10)
 parser.add_argument("--timeout",
                     dest="timeout",
-                    help="Scan The Domains/Sites Typical Ports.",
+                    help="Sets the timeout for the async requests.",
                     action='store',
                     default=0.2)
 

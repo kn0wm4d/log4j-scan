@@ -30,14 +30,17 @@ $ python3 log4j-scan.py -h
 [•] CVE-2021-44228 - Apache Log4j RCE Scanner
 [•] Scanner provided by FullHunt.io - The Next-Gen Attack Surface Management Platform.
 [•] Secure your External Attack Surface with FullHunt.io.
-usage: log4j-scan.py [-h] [-u URL] [-l USEDLIST] [--request-type REQUEST_TYPE] [--headers-file HEADERS_FILE] [--run-all-tests] [--exclude-user-agent-fuzzing]
-                     [--wait-time WAIT_TIME] [--waf-bypass] [--dns-callback-provider DNS_CALLBACK_PROVIDER] [--custom-dns-callback-host CUSTOM_DNS_CALLBACK_HOST]
+usage: log4j-scan.py [-h] [-u URL] [-l USEDLIST] [--request-type REQUEST_TYPE] [--headers-file HEADERS_FILE]
+                     [--run-all-tests] [--exclude-user-agent-fuzzing] [--wait-time WAIT_TIME] [--waf-bypass]
+                     [--dns-callback-provider DNS_CALLBACK_PROVIDER]
+                     [--custom-dns-callback-host CUSTOM_DNS_CALLBACK_HOST] [--wait-response] [--host-discovery]
+                     [--export] [--resolve] [--all-ports] [--workers WORKERS] [--timeout TIMEOUT]
 
 optional arguments:
   -h, --help            show this help message and exit
   -u URL, --url URL     Check a single URL.
   -l USEDLIST, --list USEDLIST
-                        Check a list of URLs.
+                        Check a list of URLs / IP Range (' - ' separator) / IP CIDR / Domains / Subdomains
   --request-type REQUEST_TYPE
                         Request Type: (get, post) - [Default: get].
   --headers-file HEADERS_FILE
@@ -52,6 +55,13 @@ optional arguments:
                         DNS Callback provider (Options: dnslog.cn, interact.sh) - [Default: interact.sh].
   --custom-dns-callback-host CUSTOM_DNS_CALLBACK_HOST
                         Custom DNS Callback Host.
+  --wait-response       Await the Async Request Response.
+  --host-discovery      Find hostname from the IP/IP Range
+  --export              Only export the URL list.
+  --resolve             Scan the IP URL (http://<IP>).
+  --all-ports           Scan the URLs/domains/IP Range/IP CIDR Typical Ports.
+  --workers WORKERS     Sets the number of workers for Requests Futures.
+  --timeout TIMEOUT     Sets the timeout for the async requests.
 ```
 
 ## Scan a Single URL
