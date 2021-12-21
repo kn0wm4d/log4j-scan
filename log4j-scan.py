@@ -163,6 +163,7 @@ def get_fuzzing_headers(payload):
             if i == "" or i.startswith("#"):
                 continue
             fuzzing_headers.update({i: payload})
+        f.close()
     if args.exclude_user_agent_fuzzing:
         fuzzing_headers["User-Agent"] = default_headers["User-Agent"]
 
@@ -433,12 +434,16 @@ def main():
                     else:
                         urls.append(f'http://{i}')
                         urls.append(f'https://{i}')
+            f.close()
 
         random.shuffle(urls)
 
         list_name = args.usedlist.split('.')[0] + '_test_list.txt'
         cprint(f"[•] Exported URLs List to ({list_name}).")
-        open(list_name, 'w').write(json.dumps(urls, indent=4))
+        with open(list_name, 'w') as new_file:
+            new_file.write('\n'.join(urls))
+            new_file.close()
+
         if args.export_list:
             sys.exit()
 
