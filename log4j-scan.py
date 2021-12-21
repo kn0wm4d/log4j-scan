@@ -405,16 +405,26 @@ def main():
                 if valid_ip:
                     for ip in ips:
                         if ip and f'http://{ip}' not in urls:
-                            urls.append(f'http://{ip}')
-                            urls.append(f'https://{ip}')
+                            if args.all_ports:
+                                urls.append(f'http://{ip}')
+                                urls.append(f'https://{ip}')
+                                for p in typical_ports:
+                                    urls.append(f'http://{ip}:{p}')
+                                    urls.append(f'https://{ip}:{p}')
+                            else:
+                                urls.append(f'http://{ip}')
+                                urls.append(f'https://{ip}')
+
                         if args.host_discovery:
                             try:
                                 host = socket.gethostbyaddr(ip)[0]
                                 cprint(f"[•] Resolving host from IP ({ip}) -> ({host})")
                                 if f'http://{host}' not in urls:
                                     urls.append(f'http://{host}')
-                                if f'https://{host}' not in urls:
                                     urls.append(f'https://{host}')
+                                    for p in typical_ports:
+                                        urls.append(f'http://{host}:{p}')
+                                        urls.append(f'https://{host}:{p}')
                             except:
                                 pass
                 if not valid_ip and f'http://{i}' not in urls:
