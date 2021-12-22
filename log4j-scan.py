@@ -423,9 +423,10 @@ def main():
                                 if f'http://{host}' not in urls:
                                     urls.append(f'http://{host}')
                                     urls.append(f'https://{host}')
-                                    for p in typical_ports:
-                                        urls.append(f'http://{host}:{p}')
-                                        urls.append(f'https://{host}:{p}')
+                                    if args.all_ports:
+                                        for p in typical_ports:
+                                            urls.append(f'http://{host}:{p}')
+                                            urls.append(f'https://{host}:{p}')
                             except:
                                 pass
                 if not valid_ip and f'http://{i}' not in urls:
